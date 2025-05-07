@@ -56,7 +56,7 @@ class Api_aigo:
             "tenantid": str(self.tenant_id),
             "authorization": f"Bearer {access_token}",
         }
-        response = requests.get(url_product, headers=headers)
+        response = requests.post(url = url_product, headers=headers)
         if response.status_code == 200:
             data = response.json()
             if data["total"] > 0:
