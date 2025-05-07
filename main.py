@@ -6,7 +6,8 @@ import requests
 from qreader import QReader
 import cv2
 import numpy as np
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse
+import time
 
 URL_PRINCIPAL_IMAGE = "https://aigo-oss-mall.oss-accelerate.aliyuncs.com/"
 COLUMNAS = [
@@ -21,13 +22,10 @@ COLUMNAS = [
     "LARGO",
     "ANCHO"
 ]
-COLUMNAS_EPREL = [
-    "EAN",
-    "EPREL"
-]
-data_excel = pd.read_excel("Eprel Aigostar.xlsx", sheet_name="Sheet1")
+data_excel = pd.read_excel("Nuevos Aigo.xlsx", sheet_name="Hoja1")
 aigo = aigostar.Api_aigo()
 access_token = aigo.api_auth()
+token_expiration = 3590
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0"
 }
@@ -39,38 +37,46 @@ def generate_products_excel(data_excel, access_token):
     """
     data = []
     for index, row in data_excel.iterrows():
-        ean = row["ean_proveedor"]
+        ean = row["Código barra"]
         product_info = aigo.get_info(access_token, ean)
+        if (time.time() - aigo.get_time_expiration()) > token_expiration:
+            access_token = aigo.api_auth() 
+            print("Token refrescado")
         if product_info:
-            for item in product_info:
-                parameters = transform_parameters(json.loads(item["parameter"]))
-                dimensions = get_dimensions(dimension = parameters["Dimensión"])
-                eei = parameters = parameters["EEI"]
-                images_list = json.loads(item["mainImages"])
-                eprel = get_eprel(images_list = images_list)
-            data.append(
-                        {
-                            "NOMBRE": item["appName"],
-                            "REF/SKU": item["goodsCode"],
-                            "EAN": ean,
-                            "EPREL": eprel,
-                            "EEI": eei,
-                            "PRECIO": aigo.get_price(access_token, ean),
-                            "PESO": item["peso"]*1000,
-                            "ALTO": dimensions["alto"],
-                            "LARGO": dimensions["largo"],
-                            "ANCHO": dimensions["ancho"]
-                        }
-                    )
+            try:
+                for item in product_info:
+                    parameters = transform_parameters(json.loads(item["parameter"]))
+                    dimensions = get_dimensions(dimension = parameters.get("Dimensión", "") or "")
+                    eei = parameters = parameters.get("EEI", "") or ""
+                    if item["mainImages"] is not None:
+                        images_list = json.loads(item["mainImages"])
+                    eprel = get_eprel(images_list = images_list)
+                data.append(
+                            {
+                                "NOMBRE": item["appName"],
+                                "REF/SKU": item["goodsCode"],
+                                "EAN": ean,
+                                "EPREL": eprel,
+                                "EEI": eei,
+                                "PRECIO": aigo.get_price(access_token, ean),
+                                "PESO": item["peso"]*1000,
+                                "ALTO": dimensions["alto"],
+                                "LARGO": dimensions["largo"],
+                                "ANCHO": dimensions["ancho"]
+                            }
+                        )
+                print(f"Procesando {ean}")
+            except Exception as e:
+                print(e)
         else:
             data.append(
                 {
                     "EAN": ean,
-                    "EPREL": "",
+                    "EPREL": "", 
                 }
             )
-    df = pd.DataFrame(data, columns=COLUMNAS)
-    df.to_excel("productos_aigostar_datos.xlsx", index=False)
+        df = pd.DataFrame(data, columns=COLUMNAS)
+        df.to_excel("productos_aigostar_datos.xlsx", index=False)
 
 def transform_parameters(parameters):
    return {param["ExtName"]: param["ExtValue"] for param in parameters}
