@@ -22,7 +22,7 @@ COLUMNAS = [
     "LARGO",
     "ANCHO"
 ]
-data_excel = pd.read_excel("Nuevos Aigo.xlsx", sheet_name="Hoja1")
+data_excel = pd.read_excel("Eprel-Aigostar-29-5.xlsx", sheet_name="Sheet")
 aigo = aigostar.Api_aigo()
 access_token = aigo.api_auth()
 token_expiration = 3590
@@ -37,7 +37,7 @@ def generate_products_excel(data_excel, access_token):
     """
     data = []
     for index, row in data_excel.iterrows():
-        ean = row["Código barra"]
+        ean = row["ean_proveedor"]
         product_info = aigo.get_info(access_token, ean)
         if (time.time() - aigo.get_time_expiration()) > token_expiration:
             access_token = aigo.api_auth() 
@@ -76,7 +76,7 @@ def generate_products_excel(data_excel, access_token):
                 }
             )
         df = pd.DataFrame(data, columns=COLUMNAS)
-        df.to_excel("productos_aigostar_datos.xlsx", index=False)
+        df.to_excel("productos_aigostar_datos-29-5.xlsx", index=False)
 
 def transform_parameters(parameters):
    return {param["ExtName"]: param["ExtValue"] for param in parameters}

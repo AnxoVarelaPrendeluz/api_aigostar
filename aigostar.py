@@ -1,13 +1,18 @@
 import requests
 import time
+import os
 
 
 class Api_aigo:
     def __init__(self):
-        self.identity_auth = 565569746200846336
-        self.api_key = "46949eb9b19bbac16aaf931f68100269"
-        self.tenant_id = 1436164625564569600
-        self.api_url = "https://b2b-api.aigostar.com/api/v1.0/"
+        self.identity_auth = os.getenv(
+            "AIGOSTAR_IDENTITY_AUTH", "default_identity_auth"
+        )
+        self.api_key = os.getenv("AIGOSTAR_API_KEY", "default_api_key")
+        self.tenant_id = os.getenv("AIGOSTAR_TENANT_ID", "default_tenant_id")
+        self.api_url = os.getenv(
+            "AIGOSTAR_API_URL", "https://b2b-api.aigostar.com/api/v1.0/"
+        )
         self.token_timestamp = 0
 
     def api_auth(self):
@@ -59,7 +64,7 @@ class Api_aigo:
             "tenantid": str(self.tenant_id),
             "authorization": f"Bearer {access_token}",
         }
-        response = requests.post(url = url_product, headers=headers)
+        response = requests.post(url=url_product, headers=headers)
         if response.status_code == 200:
             data = response.json()
             if data["total"] > 0:
@@ -70,5 +75,6 @@ class Api_aigo:
         else:
             print(f"Request failed with status code: {response.status_code}")
             return None
+
     def get_time_expiration(self):
         return self.token_timestamp
